@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тестирование — Иайдо</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .test-header-info { margin-bottom: 16px; }
+    .test-header-info span { margin-right: 20px; font-weight: 600; }
+    .q-num { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+
+    @media print {
+      .no-print { display: none !important; }
+      .test-question textarea { border: 1px solid #999; background: white; }
+      h1 { color: #000 !important; }
+      .page-header { border-bottom: 1px solid #000; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="page-header no-print">
+    <a href="index.html" class="back-btn">←</a>
+    <h1>Тестирование</h1>
+  </div>
+
+  <!-- ── SETUP ─────────────────────────────────────── -->
+  <div id="setup">
+    <div class="card">
+      <h2>Данные сдающего</h2>
+      <div class="form-group">
+        <label for="studentName">Имя и фамилия</label>
+        <input type="text" id="studentName" placeholder="Иванов Иван">
+      </div>
+      <div class="form-group">
+        <label for="levelSelect">Кю-ранг</label>
+        <select id="levelSelect">
+          <option value="">— выбери кю-ранг —</option>
+          <option value="5">5 кю (15 вопросов)</option>
+          <option value="4">4 кю (20 вопросов)</option>
+          <option value="3">3 кю (25 вопросов)</option>
+          <option value="2">2 кю (30 вопросов)</option>
+          <option value="1">1 кю (35 вопросов)</option>
+        </select>
+      </div>
+    </div>
+    <div id="alertSetup"></div>
+    <button class="btn btn-primary" onclick="startTest()">Начать тест</button>
+  </div>
+
+  <!-- ── TEST ──────────────────────────────────────── -->
+  <div id="testArea" class="hidden">
+
+    <!-- Print header (only visible in print) -->
+    <div id="printHeader" style="display:none">
+      <h1 style="font-size:1.5rem;margin-bottom:6px">Тест по теории иайдо</h1>
+      <div class="test-header-info">
+        <span>Сдающий: <span id="printName">—</span></span>
+        <span>Кю-ранг: <span id="printLevel">—</span></span>
+        <span>Дата: <span id="printDate">—</span></span>
+      </div>
+      <hr style="margin-bottom:20px">
+    </div>
+
+    <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <strong id="testMeta"></strong>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="window.print()" style="padding:7px 16px;font-size:0.85rem">🖨️ Печать</button>
+    </div>
+
+    <div id="questionsContainer"></div>
+
+    <div id="alertSubmit" class="no-print"></div>
+    <div class="flex-gap mt-16 no-print" id="actionRow">
+      <button class="btn btn-primary" onclick="submitTest()">📨 Отправить проверяющему</button>
+      <button class="btn btn-ghost" onclick="window.print()">🖨️ Распечатать</button>
+    </div>
+  </div>
+
+  <!-- ── DONE ──────────────────────────────────────── -->
+  <div id="done" class="hidden">
+    <div class="card text-center">
+      <div style="font-size:3rem;margin-bottom:12px">✅</div>
+      <h2>Тест отправлен!</h2>
+      <p style="color:var(--muted);margin-top:8px">Ответы ушли на почту проверяющему.</p>
+    </div>
+    <div class="flex-gap mt-16">
+      <button class="btn btn-outline" onclick="printAfterSend()">🖨️ Распечатать для себя</button>
+      <a href="index.html" class="btn btn-ghost">На главную</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+<script>
+let allTerms = [];
+let testQuestions = [];
+
+async function init() {
+  allTerms = await loadQuestions();
+}
+
+function startTest() {
+  const name = document.getElementById('studentName').value.trim();
+  const level = parseInt(document.getElementById('levelSelect').value);
+  const alertEl = document.getElementById('alertSetup');
+
+  if (!name) { showAlert(alertEl, 'error', 'Введи имя и фамилию'); return; }
+  if (!level) { showAlert(alertEl, 'error', 'Выбери кю-ранг'); return; }
+  alertEl.innerHTML = '';
+
+  const terms = getTermsForLevel(level, allTerms);
+  testQuestions = terms.map(t => makeOpenQuestion(t));
+
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('testArea').classList.remove('hidden');
+
+  const now = new Date().toLocaleDateString('ru-RU');
+  document.getElementById('testMeta').textContent = `${name} · ${level} кю · ${now}`;
+
+  // Print header
+  document.getElementById('printName').textContent = name;
+  document.getElementById('printLevel').textContent = level;
+  document.getElementById('printDate').textContent = now;
+  document.getElementById('printHeader').style.display = 'block';
+
+  renderQuestions();
+}
+
+function renderQuestions() {
+  const container = document.getElementById('questionsContainer');
+  container.innerHTML = testQuestions.map((q, i) => `
+    <div class="test-question card" style="padding:16px">
+      <div class="q-num">Вопрос ${i + 1}</div>
+      <label class="q-label">${q.text}</label>
+      <textarea id="ans-${i}" placeholder="Твой ответ…" rows="2"></textarea>
+    </div>
+  `).join('');
+}
+
+async function submitTest() {
+  const name = document.getElementById('studentName')?.value.trim()
+    || document.getElementById('printName').textContent;
+  const level = document.getElementById('levelSelect')?.value
+    || document.getElementById('printLevel').textContent;
+  const alertEl = document.getElementById('alertSubmit');
+
+  const answersWithCorrect = testQuestions.map((q, i) => ({
+    question: q.text,
+    answer: document.getElementById(`ans-${i}`)?.value.trim() || '',
+    correct: q.correct,
+  }));
+
+  showAlert(alertEl, 'info', 'Отправляю…');
+  document.getElementById('actionRow').querySelector('button').disabled = true;
+
+  try {
+    const resp = await fetch('/api/submit-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_name: name, level, answers: answersWithCorrect }),
+    });
+    const data = await resp.json();
+
+    if (data.ok) {
+      document.getElementById('testArea').classList.add('hidden');
+      document.getElementById('done').classList.remove('hidden');
+    } else {
+      showAlert(alertEl, 'error', data.error || 'Ошибка отправки');
+      document.getElementById('actionRow').querySelector('button').disabled = false;
+    }
+  } catch (e) {
+    showAlert(alertEl, 'error', 'Сетевая ошибка: ' + e.message);
+    document.getElementById('actionRow').querySelector('button').disabled = false;
+  }
+}
+
+function printAfterSend() {
+  document.getElementById('done').classList.add('hidden');
+  document.getElementById('testArea').classList.remove('hidden');
+  window.print();
+  document.getElementById('testArea').classList.add('hidden');
+  document.getElementById('done').classList.remove('hidden');
+}
+
+function showAlert(el, type, msg) {
+  el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Иайдо — тренажёр</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+
+  <div class="main-hero">
+    <!-- Tomoe mon (triple comma crest) SVG — традиционный японский герб -->
+    <svg class="hero-mon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#8b0000" stroke-width="2.5"/>
+      <g fill="#8b0000">
+        <!-- Three tomoe (巴) rotated 120° each -->
+        <g transform="rotate(0 50 50)">
+          <path d="M50 50 Q58 30 68 36 Q80 44 72 56 Q64 68 50 60 Q40 54 50 50Z"/>
+          <circle cx="65" cy="38" r="6"/>
+        </g>
+        <g transform="rotate(120 50 50)">
+          <path d="M50 50 Q58 30 68 36 Q80 44 72 56 Q64 68 50 60 Q40 54 50 50Z"/>
+          <circle cx="65" cy="38" r="6"/>
+        </g>
+        <g transform="rotate(240 50 50)">
+          <path d="M50 50 Q58 30 68 36 Q80 44 72 56 Q64 68 50 60 Q40 54 50 50Z"/>
+          <circle cx="65" cy="38" r="6"/>
+        </g>
+      </g>
+    </svg>
+    <h1>居合道 — Тренажёр</h1>
+    <p>Подготовка к экзаменам по теории иайдо</p>
+  </div>
+
+  <div class="main-divider">選択</div>
+
+  <div class="main-cards">
+    <a href="study.html" class="main-card">
+      <div class="icon">📖</div>
+      <h2>Изучение</h2>
+      <p>Карточки с переворотом. Просмотр терминов по кю-рангам, отметки «знаю / повторить».</p>
+    </a>
+    <a href="training.html" class="main-card">
+      <div class="icon">⚔️</div>
+      <h2>Самоподготовка</h2>
+      <p>Тест с вариантами ответа. Режим слабых мест, прогресс, статистика ошибок.</p>
+    </a>
+  </div>
+  <div class="main-cards-bottom">
+    <a href="test.html" class="main-card">
+      <div class="icon">📝</div>
+      <h2>Тестирование</h2>
+      <p>Открытые вопросы. Ответы отправляются на почту проверяющему.</p>
+    </a>
+    <a href="config.html" class="main-card">
+      <div class="icon">⚙️</div>
+      <h2>Настройки</h2>
+      <p>Email проверяющего, загрузка таблицы терминов.</p>
+    </a>
+  </div>
+
+</div>
+</body>
+</html>

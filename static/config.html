@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Настройки — Иайдо</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+
+  <div class="page-header">
+    <a href="index.html" class="back-btn">←</a>
+    <h1>Настройки</h1>
+  </div>
+
+  <div id="alert"></div>
+
+  <div class="card">
+    <h2>Почта проверяющего</h2>
+    <div class="form-group" style="margin-top:12px">
+      <label for="reviewerEmail">Email проверяющего</label>
+      <input type="email" id="reviewerEmail" placeholder="examiner@example.com">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Gmail отправителя</h2>
+    <div class="alert alert-info" style="margin-bottom:14px">
+      Для отправки через Gmail нужен <strong>пароль приложения</strong> — не обычный пароль аккаунта.<br>
+      <span class="note">
+        Google Аккаунт → Безопасность → Двухэтапная аутентификация → Пароли приложений.
+        Создай новое приложение, скопируй 16-значный код.
+      </span>
+    </div>
+    <div class="form-group">
+      <label for="smtpUser">Gmail адрес отправителя</label>
+      <input type="email" id="smtpUser" placeholder="sender@gmail.com">
+    </div>
+    <div class="form-group">
+      <label for="smtpPass">Пароль приложения</label>
+      <input type="password" id="smtpPass" placeholder="Введи новый пароль (оставь пустым — не изменится)">
+      <div class="note" id="passStatus"></div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="saveConfig()">Сохранить</button>
+
+  <!-- ── Загрузка таблицы терминов ── -->
+  <div class="card" style="margin-top:28px">
+    <h2>Таблица терминов</h2>
+    <p class="note" style="margin-bottom:14px">
+      Загрузи .xlsx или .csv с колонками <strong>term</strong> / <strong>level</strong> / <strong>definition</strong>
+      (или на русском: термин / уровень / определение — колонка «уровень» = кю-ранг цифрой от 1 до 5). Текущая таблица будет заменена, старая сохранится как резервная копия.
+    </p>
+
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept=".xlsx,.csv" onchange="uploadFile(this.files[0])">
+      <div class="upload-icon">📂</div>
+      <div>Нажми или перетащи файл сюда</div>
+      <div class="note">.xlsx или .csv</div>
+    </div>
+    <div id="uploadStatus" class="upload-status"></div>
+  </div>
+
+</div>
+
+<script>
+async function loadConfig() {
+  try {
+    const r = await fetch('/api/config');
+    const cfg = await r.json();
+    document.getElementById('reviewerEmail').value = cfg.reviewer_email || '';
+    document.getElementById('smtpUser').value = cfg.smtp_user || '';
+    if (cfg.smtp_password_set) {
+      document.getElementById('passStatus').textContent = '✓ Пароль сохранён';
+    }
+  } catch (e) {
+    showAlert('error', 'Не удалось загрузить настройки: ' + e.message);
+  }
+}
+
+async function saveConfig() {
+  const payload = {
+    reviewer_email: document.getElementById('reviewerEmail').value.trim(),
+    smtp_user: document.getElementById('smtpUser').value.trim(),
+    smtp_password: document.getElementById('smtpPass').value,
+  };
+
+  if (!payload.reviewer_email || !payload.smtp_user) {
+    showAlert('error', 'Заполни email проверяющего и адрес отправителя');
+    return;
+  }
+
+  try {
+    const r = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      showAlert('success', '✓ Настройки сохранены');
+      document.getElementById('smtpPass').value = '';
+      document.getElementById('passStatus').textContent = '✓ Пароль сохранён';
+    } else {
+      showAlert('error', 'Ошибка сохранения');
+    }
+  } catch (e) {
+    showAlert('error', 'Сетевая ошибка: ' + e.message);
+  }
+}
+
+function showAlert(type, msg) {
+  const el = document.getElementById('alert');
+  el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+  setTimeout(() => { if (type === 'success') el.innerHTML = ''; }, 4000);
+}
+
+loadConfig();
+
+// ── Upload ──
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) uploadFile(f);
+});
+
+async function uploadFile(file) {
+  if (!file) return;
+  const statusEl = document.getElementById('uploadStatus');
+  statusEl.innerHTML = `<div class="alert alert-info">⏳ Загружаем ${file.name}...</div>`;
+
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch('/api/upload-questions', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (data.ok) {
+      const byLevel = Object.entries(data.by_level || {})
+        .map(([l,n]) => `${l} кю: ${n}`).join(' · ');
+      statusEl.innerHTML = `<div class="alert alert-success">
+        ✓ Загружено ${data.total} терминов (${byLevel}).
+        Страница обновит карточки автоматически.
+      </div>`;
+    } else {
+      statusEl.innerHTML = `<div class="alert alert-error">Ошибка: ${data.error}</div>`;
+    }
+  } catch (e) {
+    statusEl.innerHTML = `<div class="alert alert-error">Сетевая ошибка: ${e.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>

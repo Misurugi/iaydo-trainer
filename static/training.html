@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Самоподготовка — Иайдо</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <a href="index.html" class="back-btn">←</a>
+    <h1>Самоподготовка</h1>
+  </div>
+
+  <!-- ── SETUP ─────────────────────────────────────── -->
+  <div id="setup">
+    <div class="tabs">
+      <div class="tab active" data-tab="level" onclick="switchTab('level')">По кю-рангу</div>
+      <div class="tab" data-tab="weak" onclick="switchTab('weak')">
+        Слабые места <span class="badge" id="weakBadge">0</span>
+      </div>
+    </div>
+
+    <!-- Level mode -->
+    <div id="tab-level">
+      <div class="card">
+        <h2>Выбери кю-ранг</h2>
+        <div class="level-grid">
+          <button class="level-btn" onclick="selectLevel(5)">5</button>
+          <button class="level-btn" onclick="selectLevel(4)">4</button>
+          <button class="level-btn" onclick="selectLevel(3)">3</button>
+          <button class="level-btn" onclick="selectLevel(2)">2</button>
+          <button class="level-btn" onclick="selectLevel(1)">1</button>
+        </div>
+        <div id="levelInfo" class="note" style="min-height:20px"></div>
+      </div>
+      <div id="startRowLevel" class="hidden text-center">
+        <button class="btn btn-primary" onclick="startLevel()">Начать</button>
+      </div>
+    </div>
+
+    <!-- Weak mode -->
+    <div id="tab-weak" class="hidden">
+      <div class="card">
+        <div id="weakInfo"></div>
+      </div>
+      <div id="startRowWeak" class="text-center hidden">
+        <button class="btn btn-primary" onclick="startWeak()">Начать (слабые места)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── QUIZ ──────────────────────────────────────── -->
+  <div id="quiz" class="hidden">
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    <div class="counter" id="counter">Вопрос 1 из 15</div>
+    <div class="card">
+      <div class="question-text" id="questionText"></div>
+      <div class="options" id="optionsContainer"></div>
+      <div id="feedback" class="feedback hidden"></div>
+    </div>
+    <div class="next-row hidden" id="nextRow">
+      <button class="btn btn-primary" onclick="nextQuestion()">Следующий →</button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ────────────────────────────────────── -->
+  <div id="results" class="hidden">
+    <div class="card text-center">
+      <h2>Результат</h2>
+      <div class="score-big" id="scoreText">—</div>
+      <div class="score-sub" id="scoreSub"></div>
+    </div>
+
+    <div id="wrongSection" class="hidden">
+      <div class="card">
+        <h2>Ошибки</h2>
+        <ul class="wrong-list" id="wrongList"></ul>
+      </div>
+    </div>
+
+    <div class="flex-gap mt-16">
+      <button class="btn btn-primary" onclick="restart()">Попробовать снова</button>
+      <a href="index.html" class="btn btn-ghost">На главную</a>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script src="app.js"></script>
+<script>
+let allQuestions = [];
+let questions = [];      // generated for this session
+let current = 0;
+let correctCount = 0;
+let wrongTerms = [];     // {term, definition, wrongAnswer}
+let selectedLevel = null;
+let mode = 'level';      // 'level' | 'weak'
+
+// ── Init ────────────────────────────────────────────────────────────────────
+async function init() {
+  allQuestions = await loadQuestions();
+  updateWeakBadge();
+  updateWeakTab();
+}
+
+function updateWeakBadge() {
+  const n = weakCount();
+  document.getElementById('weakBadge').textContent = n;
+}
+
+function updateWeakTab() {
+  const weakTerms = getWeakTerms(allQuestions);
+  const n = weakTerms.length;
+  const info = document.getElementById('weakInfo');
+  const startRow = document.getElementById('startRowWeak');
+
+  if (n === 0) {
+    info.innerHTML = '<p class="note">Слабых мест пока нет — пройди хотя бы один тест по кю-рангу 🎯</p>';
+    startRow.classList.add('hidden');
+  } else {
+    info.innerHTML = `<p>Найдено <strong>${n}</strong> термин${ending(n)} с ошибками. Пройди их снова.</p>`;
+    startRow.classList.remove('hidden');
+  }
+}
+
+function ending(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return '';
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'а';
+  return 'ов';
+}
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  mode = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tab-level').classList.toggle('hidden', tab !== 'level');
+  document.getElementById('tab-weak').classList.toggle('hidden', tab !== 'weak');
+  if (tab === 'weak') updateWeakTab();
+}
+
+// ── Level select ─────────────────────────────────────────────────────────────
+const LEVEL_COUNTS = { 5: 15, 4: 20, 3: 25, 2: 30, 1: 35 };
+
+function selectLevel(lv) {
+  selectedLevel = lv;
+  document.querySelectorAll('.level-btn').forEach((b, i) => {
+    b.classList.toggle('active', 5 - i === lv);
+  });
+  const total = LEVEL_COUNTS[lv];
+  const own = 15;
+  const prev = total - own;
+  const prevNote = prev ? ` + ${prev} из предыдущих кю-рангов` : '';
+  document.getElementById('levelInfo').textContent =
+    `Кю-ранг ${lv}: ${own} вопросов из кю-ранга ${lv}${prevNote}. Всего: ${total}`;
+  document.getElementById('startRowLevel').classList.remove('hidden');
+}
+
+// ── Start ────────────────────────────────────────────────────────────────────
+function startLevel() {
+  if (!selectedLevel) return;
+  const terms = getTermsForLevel(selectedLevel, allQuestions);
+  questions = terms.map(t => makeQuestion(t, allQuestions));
+  startQuiz();
+}
+
+function startWeak() {
+  const weakTerms = getWeakTerms(allQuestions);
+  const pool = shuffle(weakTerms).slice(0, 20);
+  questions = pool.map(t => makeQuestion(t, allQuestions));
+  startQuiz();
+}
+
+function startQuiz() {
+  current = 0;
+  correctCount = 0;
+  wrongTerms = [];
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('quiz').classList.remove('hidden');
+  showQuestion();
+}
+
+// ── Quiz ─────────────────────────────────────────────────────────────────────
+function showQuestion() {
+  const q = questions[current];
+  const total = questions.length;
+
+  document.getElementById('progressBar').style.width = `${(current / total) * 100}%`;
+  document.getElementById('counter').textContent = `Вопрос ${current + 1} из ${total}`;
+  document.getElementById('questionText').textContent = q.text;
+  document.getElementById('feedback').classList.add('hidden');
+  document.getElementById('nextRow').classList.add('hidden');
+
+  const container = document.getElementById('optionsContainer');
+  container.innerHTML = '';
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt;
+    btn.onclick = () => answer(opt, btn);
+    container.appendChild(btn);
+  });
+}
+
+function answer(chosen, btn) {
+  const q = questions[current];
+  const isCorrect = chosen === q.correct;
+
+  // Disable all buttons
+  document.querySelectorAll('.option-btn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === q.correct) b.classList.add('correct');
+  });
+  if (!isCorrect) btn.classList.add('wrong');
+
+  // Record weak spots
+  recordAnswer(q.termRef.term, isCorrect);
+  updateWeakBadge();
+
+  if (isCorrect) {
+    correctCount++;
+    showFeedback(true, '✓ Правильно!');
+  } else {
+    wrongTerms.push({ term: q.termRef.term, definition: q.termRef.definition, chosen });
+    showFeedback(false, `✗ Неверно. Правильный ответ: «${q.correct}»`);
+  }
+
+  document.getElementById('nextRow').classList.remove('hidden');
+}
+
+function showFeedback(correct, text) {
+  const el = document.getElementById('feedback');
+  el.textContent = text;
+  el.className = `feedback ${correct ? 'correct' : 'wrong'}`;
+  el.classList.remove('hidden');
+}
+
+function nextQuestion() {
+  current++;
+  if (current < questions.length) {
+    showQuestion();
+  } else {
+    showResults();
+  }
+}
+
+// ── Results ──────────────────────────────────────────────────────────────────
+function showResults() {
+  document.getElementById('quiz').classList.add('hidden');
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('progressBar').style.width = '100%';
+
+  const total = questions.length;
+  const pct = Math.round((correctCount / total) * 100);
+  document.getElementById('scoreText').textContent = `${correctCount} / ${total}`;
+  document.getElementById('scoreSub').textContent = `${pct}% правильных ответов`;
+
+  if (wrongTerms.length) {
+    document.getElementById('wrongSection').classList.remove('hidden');
+    const list = document.getElementById('wrongList');
+    list.innerHTML = wrongTerms.map(w =>
+      `<li>
+        <span class="term">${w.term}</span>
+        <span class="def">${w.definition}</span>
+      </li>`
+    ).join('');
+  } else {
+    document.getElementById('wrongSection').classList.add('hidden');
+  }
+}
+
+function restart() {
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('setup').classList.remove('hidden');
+  updateWeakTab();
+}
+
+init();
+</script>
+</body>
+</html>

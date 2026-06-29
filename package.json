@@ -1,0 +1,60 @@
+{
+  "name": "iaydo-trainer",
+  "version": "1.0.0",
+  "description": "Тренажёр по теории иайдо",
+  "main": "main.js",
+  "scripts": {
+    "start": "node server.js",
+    "electron": "electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:all": "electron-builder --win --mac"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "ru.fivecorners.iaydo",
+    "productName": "Иайдо Тренажёр",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "server.js",
+      "static/**",
+      "data/questions.json",
+      "node_modules/**",
+      "package.json",
+      "!dist/**",
+      "!*.bat",
+      "!*.md",
+      "!*.py",
+      "!requirements.txt",
+      "!iay_dlya_prilozhenia.xlsx",
+      "!data_preview.json",
+      "!config.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": ["ru_RU", "en_US"],
+      "language": "1049"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.education"
+    }
+  }
+}
