@@ -1,43 +1,33 @@
-# Kickoff — следующая сессия иайдо тренажёр
+# Kickoff — следующая сессия: иайдо тренажёр
 
-## Где мы
+## Где мы (19.09.2026)
 
-Релиз v1.0.1 (добавлен «Словарь» — поиск по терминам). До этого v1.0.0 (2026-06-29). Установщик ставить от имени администратора, если путь в Program Files.
-- Windows: `iaydo-trainer-setup-1.0.0.exe` (77 МБ)
-- macOS: `iaydo-trainer-1.0.0.dmg` (96 МБ)
-- https://github.com/Misurugi/iaydo-trainer/releases/tag/v1.0.0
+Проект: `D:\Claude\Не-Битрикс проекты\iaydo` (git → github.com/Misurugi/iaydo-trainer, ветка `main`).
+Релиз **v1.0.1** выпущен: добавлен «Словарь» (`static/glossary.html`) — поиск по терминам и определениям, фильтр по кю-рангам, ё=е, подсветка.
+Установлен у Athos в `C:\Program Files (x86)\iaydo\iaydo-trainer`, работает.
 
-Приложение работает: 156 вопросов, Express сервер на порту 5000, Electron обёртка.
+## Как собирать и ставить
 
-## Known issues
+- Релиз через GitHub: `git tag vX.Y.Z && git push origin vX.Y.Z` (Actions собирает exe + dmg).
+- Локально: `npx electron-builder --win -c.win.signAndEditExecutable=false` → `dist\Иайдо Тренажёр Setup <версия>.exe`.
+  Обычный `npm run build:win` падает на симлинках winCodeSign без прав админа.
+- Установщик запускать **от имени администратора** (Program Files), тренажёр перед этим закрыть.
+- На порту 5000 сидит установленное приложение — для проверки из исходников его надо закрыть.
 
-**macOS Gatekeeper** — `.dmg` без подписи блокируется с ошибкой «приложение повреждено».
-Ручной фикс для пользователя:
-```bash
-xattr -cr "/Applications/Иайдо Тренажёр.app"
-```
-Долгосрочный фикс — notarization через Apple Developer Program ($99/год). Отложено.
+## Не проверено
 
-## Возможные следующие шаги
+- Внешний вид «Словаря» в приложении глазами разработчика не смотрели (Athos сказал «работает», без деталей).
+- Установка поверх старой версии без потери данных — по факту прошла, отдельно не тестировали.
 
-1. **Gmail app password** — настройка SMTP для отправки результатов теста проверяющему
-   - Google Аккаунт → Безопасность → Двухэтапная аутентификация → Пароли приложений
-   - Вставить через `config.html` в интерфейсе
+## Возможные шаги
 
-2. **macOS notarization** — подпись приложения, чтобы Gatekeeper не блокировал
+1. Gmail app password для отправки результатов теста (config.html).
+2. macOS notarization ($99/год) — пока отложено, фикс `xattr -cr "/Applications/Иайдо Тренажёр.app"`.
+3. История сессий — отложено решением Athos.
 
-3. **Новые фичи** — история сессий и прочее отложено по решению пользователя
+## Память
 
-4. **Следующий релиз** — при любых изменениях: `git tag v1.0.1 && git push origin v1.0.1`
+- `project-iaydo-trainer.md` (проект `D--Claude`) — путь, установщик, локальная сборка.
+- `project_iaydo.md` (проект `D------------claude`) — стек и визуальный стиль.
 
-## Ключевые файлы
-
-- `D:\Документы\claude\iaydo\server.js` — Express сервер, роуты, порт 5000
-- `D:\Документы\claude\iaydo\main.js` — Electron точка входа
-- `D:\Документы\claude\iaydo\.github\workflows\build.yml` — CI/CD
-- `D:\Документы\claude\iaydo\data\questions.json` — 156 терминов
-
-## Memory
-
-- `project_iaydo.md` — полный статус проекта и стек
-- `feedback_electron_github_actions.md` — питфолсы Electron + GitHub Actions
+Папки `iaydo_trainer_node` / `iaydo_trainer_python` — старые сборки, лежат в `Не-Битрикс проекты\archive\`, не читать.
