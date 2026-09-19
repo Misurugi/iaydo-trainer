@@ -1,6 +1,6 @@
 {
   "name": "iaydo-trainer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Тренажёр по теории иайдо",
   "main": "main.js",
   "scripts": {
@@ -49,12 +49,18 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerLanguages": ["ru_RU", "en_US"],
+      "installerLanguages": [
+        "ru_RU",
+        "en_US"
+      ],
       "language": "1049"
     },
     "mac": {
       "target": "dmg",
       "category": "public.app-category.education"
     }
+  },
+  "allowScripts": {
+    "electron@31.7.7": true
   }
 }

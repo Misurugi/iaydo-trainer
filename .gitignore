@@ -7,3 +7,7 @@ __pycache__/
 *.pyc
 *.py[cod]
 .env
+*.exe
+*.dmg
+iaydo_trainer.zip
+Скриншот-*.jpg

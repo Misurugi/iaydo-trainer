@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Словарь — Иайдо</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .search-input {
+      width: 100%;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+    .gl-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .gl-item:last-child { border-bottom: none; }
+    .gl-term { font-weight: 700; font-size: 1.05rem; color: var(--accent); }
+    .gl-def  { margin-top: 3px; }
+    .gl-lvl  { float: right; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.08em; }
+    .gl-item mark { background: #f3d98a; color: inherit; padding: 0 1px; }
+    .gl-empty { text-align: center; color: var(--muted); font-style: italic; padding: 20px 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="page-header">
+    <a href="index.html" class="back-btn">←</a>
+    <h1>Словарь терминов</h1>
+  </div>
+
+  <div class="card">
+    <input type="search" id="q" class="search-input" placeholder="Поиск по термину или определению…" autocomplete="off" autofocus>
+    <div class="level-grid" style="grid-template-columns: repeat(6,1fr); margin-top:12px">
+      <button class="level-btn active" data-level="0">Все</button>
+      <button class="level-btn" data-level="5">5</button>
+      <button class="level-btn" data-level="4">4</button>
+      <button class="level-btn" data-level="3">3</button>
+      <button class="level-btn" data-level="2">2</button>
+      <button class="level-btn" data-level="1">1</button>
+    </div>
+    <div id="info" class="note" style="min-height:20px;margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div id="list"></div>
+  </div>
+
+</div>
+<script>
+let cards = [];
+let level = 0;
+
+// Регистр и ё/е не должны мешать поиску: «Ёкоитимондзи» находится по «екои».
+// Длина строки при замене не меняется, поэтому индексы совпадают с оригиналом.
+const norm = s => s.toLowerCase().replace(/ё/g, 'е');
+const esc  = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function highlight(text, q) {
+  if (!q) return esc(text);
+  const t = norm(text);
+  let out = '', pos = 0, i;
+  while ((i = t.indexOf(q, pos)) !== -1) {
+    out += esc(text.slice(pos, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>';
+    pos = i + q.length;
+  }
+  return out + esc(text.slice(pos));
+}
+
+function render() {
+  const q = norm(document.getElementById('q').value.trim());
+  const found = cards
+    .filter(c => !level || c.level === level)
+    .filter(c => !q || norm(c.term).includes(q) || norm(c.definition).includes(q))
+    .sort((a, b) => a.term.localeCompare(b.term, 'ru'));
+
+  document.getElementById('info').textContent = `Найдено: ${found.length} из ${cards.length}`;
+  document.getElementById('list').innerHTML = found.length
+    ? found.map(c => `<div class="gl-item">
+        <span class="gl-lvl">${c.level} кю</span>
+        <div class="gl-term">${highlight(c.term, q)}</div>
+        <div class="gl-def">${highlight(c.definition, q)}</div>
+      </div>`).join('')
+    : '<div class="gl-empty">Ничего не найдено</div>';
+}
+
+document.getElementById('q').addEventListener('input', render);
+document.querySelectorAll('.level-btn').forEach(b => b.addEventListener('click', () => {
+  level = +b.dataset.level;
+  document.querySelectorAll('.level-btn').forEach(x => x.classList.toggle('active', x === b));
+  render();
+}));
+
+fetch('/data/questions.json')
+  .then(r => r.json())
+  .then(d => { cards = d; render(); })
+  .catch(() => { document.getElementById('info').textContent = 'Не удалось загрузить термины'; });
+</script>
+</body>
+</html>
